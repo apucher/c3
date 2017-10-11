@@ -1,5 +1,5 @@
 import { c3_chart_internal_fn } from './core';
-import { isValue, isUndefined, isDefined, notEmpty } from './util';
+import { isUndefined, isDefined, notEmpty } from './util';
 
 c3_chart_internal_fn.convertUrlToData = function (url, mimeType, headers, keys, done) {
     var $$ = this, type = mimeType ? mimeType : 'csv';
@@ -137,10 +137,21 @@ c3_chart_internal_fn.convertColumnsToData = (columns) => {
 };
 
 c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
-    var $$ = this, config = $$.config,
-        ids = $$.d3.keys(data[0]).filter($$.isNotX, $$),
-        xs = $$.d3.keys(data[0]).filter($$.isX, $$),
-        targets;
+    var $$ = this, config = $$.config, targets;
+
+    // extract x and y values
+    var d3keys = $$.d3.keys(data[0]),
+        xsRaw = {}; // use xsRaw as set
+
+    if (config.data_x) {
+        xsRaw[config.data_x] = true;
+    }
+    if (config.data_xs) {
+        Object.values(config.data_xs).forEach(function (v) { xsRaw[v] = true; });
+    }
+
+    var xs = d3keys.filter(function (v) { return v in xsRaw; });
+    var ids = d3keys.filter(function (v) { return !(v in xsRaw); });
 
     // save x for update data by load when custom x and c3.x API
     ids.forEach(function (id) {
@@ -149,11 +160,10 @@ c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
         if ($$.isCustomX() || $$.isTimeSeries()) {
             // if included in input data
             if (xs.indexOf(xKey) >= 0) {
-                $$.data.xs[id] = (appendXs && $$.data.xs[id] ? $$.data.xs[id] : []).concat(
-                    data.map(function (d) { return d[xKey]; })
-                        .filter(isValue)
-                        .map(function (rawX, i) { return $$.generateTargetX(rawX, id, i); })
-                );
+                var existing = (appendXs && $$.data.xs[id] ? $$.data.xs[id] : []);
+                var appended = data.filter(function (d) { return xKey in d; })
+                    .map(function (d, i) { return $$.generateTargetX(d[xKey], id, i); });
+                $$.data.xs[id] = existing.concat(appended);
             }
             // if not included in input data, find from preloaded data of other id's x
             else if (config.data_x) {
@@ -181,10 +191,14 @@ c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
     targets = ids.map(function (id, index) {
         var convertedId = config.data_idConverter(id);
         var xKey = $$.getXKey(id);
+
+        var maxIndex = $$.data.xs[id].length;
+        var pruned = data.slice(0, maxIndex).filter(function (d) { return isDefined(d[id]); });
+
         return {
             id: convertedId,
             id_org: id,
-            values: data.map(function (d, i) {
+            values: pruned.map(function (d, i) {
                 var rawX = d[xKey],
                     value = d[id] !== null && !isNaN(d[id]) ? +d[id] : null, x;
                 // use x as categories if custom x and categorized
@@ -200,12 +214,8 @@ c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
                 } else {
                     x  = $$.generateTargetX(rawX, id, i);
                 }
-                // mark as x = undefined if value is undefined and filter to remove after mapped
-                if (isUndefined(d[id]) || $$.data.xs[id].length <= i) {
-                    x = undefined;
-                }
                 return {x: x, value: value, id: convertedId};
-            }).filter(function (v) { return isDefined(v.x); })
+            })
         };
     });
 
