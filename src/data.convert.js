@@ -181,10 +181,14 @@ c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
     targets = ids.map(function (id, index) {
         var convertedId = config.data_idConverter(id);
         var xKey = $$.getXKey(id);
+
+        var maxIndex = $$.data.xs[id].length;
+        var pruned = data.slice(0, maxIndex).filter(function (d) { return isDefined(d[id]); });
+
         return {
             id: convertedId,
             id_org: id,
-            values: data.map(function (d, i) {
+            values: pruned.map(function (d, i) {
                 var rawX = d[xKey],
                     value = d[id] !== null && !isNaN(d[id]) ? +d[id] : null, x;
                 // use x as categories if custom x and categorized
@@ -200,12 +204,8 @@ c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
                 } else {
                     x  = $$.generateTargetX(rawX, id, i);
                 }
-                // mark as x = undefined if value is undefined and filter to remove after mapped
-                if (isUndefined(d[id]) || $$.data.xs[id].length <= i) {
-                    x = undefined;
-                }
                 return {x: x, value: value, id: convertedId};
-            }).filter(function (v) { return isDefined(v.x); })
+            })
         };
     });
 
