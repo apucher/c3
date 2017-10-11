@@ -155,11 +155,10 @@ c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
         if ($$.isCustomX() || $$.isTimeSeries()) {
             // if included in input data
             if (xs.indexOf(xKey) >= 0) {
-                $$.data.xs[id] = (appendXs && $$.data.xs[id] ? $$.data.xs[id] : []).concat(
-                    data.map(function (d) { return d[xKey]; })
-                        .filter(isValue)
-                        .map(function (rawX, i) { return $$.generateTargetX(rawX, id, i); })
-                );
+                var existing = (appendXs && $$.data.xs[id] ? $$.data.xs[id] : []);
+                var appended = data.filter(function (d) { return xKey in d; })
+                    .map(function (d, i) { return $$.generateTargetX(d[xKey], id, i); });
+                $$.data.xs[id] = existing.concat(appended);
             }
             // if not included in input data, find from preloaded data of other id's x
             else if (config.data_x) {
