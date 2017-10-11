@@ -1,5 +1,5 @@
 import { c3_chart_internal_fn } from './core';
-import { isValue, isUndefined, isDefined, notEmpty } from './util';
+import { isUndefined, isDefined, notEmpty } from './util';
 
 c3_chart_internal_fn.convertUrlToData = function (url, mimeType, headers, keys, done) {
     var $$ = this, type = mimeType ? mimeType : 'csv';
@@ -139,11 +139,16 @@ c3_chart_internal_fn.convertColumnsToData = (columns) => {
 c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
     var $$ = this, config = $$.config, targets;
 
+    // extract x and y values
     var d3keys = $$.d3.keys(data[0]),
         xsRaw = {}; // use xsRaw as set
 
-    if (config.data_x) xsRaw[config.data_x] = true;
-    if (config.data_xs) Object.values(config.data_xs).forEach(function (v) { xsRaw[v] = true; });
+    if (config.data_x) {
+        xsRaw[config.data_x] = true;
+    }
+    if (config.data_xs) {
+        Object.values(config.data_xs).forEach(function (v) { xsRaw[v] = true; });
+    }
 
     var xs = d3keys.filter(function (v) { return v in xsRaw; });
     var ids = d3keys.filter(function (v) { return !(v in xsRaw); });
