@@ -37,11 +37,7 @@ export var getOption = function (options, key, defaultValue) {
     return isDefined(options[key]) ? options[key] : defaultValue;
 };
 export var hasValue = function (dict, value) {
-    var found = false;
-    Object.keys(dict).forEach(function (key) {
-        if (dict[key] === value) { found = true; }
-    });
-    return found;
+    return (Object.values(dict).indexOf(value) > -1);
 };
 export var sanitise = function (str) {
     return typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
